@@ -1,0 +1,384 @@
+diff --git a/build.sbt b/build.sbt
+index 66e4d8c..e8a8877 100644
+--- a/build.sbt
++++ b/build.sbt
+@@ -4,7 +4,7 @@ import android.Dependencies.{apklib,aar}
+ 
+ android.Plugin.androidBuild
+ 
+-platformTarget in Android := "android-21"
++platformTarget in Android := "android-22"
+ 
+ name := "shadowsocks"
+ 
+@@ -31,8 +31,6 @@ libraryDependencies ++= Seq(
+   "com.joanzapata.android" % "android-iconify" % "1.0.9",
+   "net.glxn.qrgen" % "android" % "2.0",
+   "net.simonvt.menudrawer" % "menudrawer" % "3.0.6",
+-  "com.google.android.gms" % "play-services-base" % "6.5.87",
+-  "com.google.android.gms" % "play-services-ads" % "6.5.87",
+   "com.android.support" % "support-v4" % "21.0.3"
+ )
+ 
+diff --git a/src/main/AndroidManifest.xml b/src/main/AndroidManifest.xml
+index 85f71c3..7bd65dc 100644
+--- a/src/main/AndroidManifest.xml
++++ b/src/main/AndroidManifest.xml
+@@ -24,16 +24,10 @@
+       android:backupAgent=".ShadowsocksBackupAgent"
+       android:label="@string/app_name">
+ 
+-    <meta-data android:name="com.google.android.gms.version"
+-                      android:value="@integer/google_play_services_version"/>
+     <meta-data android:name="com.google.android.backup.api_key"
+         android:value="AEdPqrEAAAAI_zVxZthz2HDuz9toTvkYvL0L5GA-OjeUIfBeXg"/>
+ 
+     <activity
+-        android:name="com.google.android.gms.ads.AdActivity"
+-        android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|uiMode|screenSize|smallestScreenSize"/>
+-
+-    <activity
+         android:name=".Shadowsocks"
+         android:label="@string/app_name"
+         android:theme="@style/Theme.Shadowsocks"
+diff --git a/src/main/jni/shadowsocks-libev b/src/main/jni/shadowsocks-libev
+index 215c063..02050e4 160000
+--- a/src/main/jni/shadowsocks-libev
++++ b/src/main/jni/shadowsocks-libev
+@@ -1 +1 @@
+-Subproject commit 215c06360935a3a80d1ec33af39be7f420e89076
++Subproject commit 02050e49e794bf366adb2d6c1eb230724225fe82
+diff --git a/src/main/res/xml/tracker.xml b/src/main/res/xml/tracker.xml
+deleted file mode 100644
+index 3e4e64c..0000000
+--- a/src/main/res/xml/tracker.xml
++++ /dev/null
+@@ -1,23 +0,0 @@
+-<?xml version="1.0" encoding="utf-8"?>
+-<resources>
+-    <!-- Set a session timeout period of 1 week -->
+-    <integer name="ga_sessionTimeout">604800</integer>
+-
+-    <!-- Enable automatic Activity measurement -->
+-    <bool name="ga_autoActivityTracking">true</bool>
+-
+-    <!-- Enable exception reports -->
+-    <bool name="ga_reportUncaughtExceptions">true</bool>
+-
+-    <!-- The screen names that will appear in reports -->
+-    <screenName name="com.google.android.gms.analytics.samples.mobileplayground.ScreenviewFragment">
+-        Shadowsocks ScreenView
+-    </screenName>
+-
+-    <screenName name="com.google.android.gms.analytics.samples.mobileplayground.EcommerceFragment">
+-        Shadowsocks EcommerceView
+-    </screenName>
+-
+-    <!--  The following value should be replaced with correct property id. -->
+-    <string name="ga_trackingId">UA-37082941-1</string>
+-</resources>
+diff --git a/src/main/scala/com/github/shadowsocks/Shadowsocks.scala b/src/main/scala/com/github/shadowsocks/Shadowsocks.scala
+index d44497f..acf6cb0 100644
+--- a/src/main/scala/com/github/shadowsocks/Shadowsocks.scala
++++ b/src/main/scala/com/github/shadowsocks/Shadowsocks.scala
+@@ -62,8 +62,6 @@ import com.github.shadowsocks.aidl.{IShadowsocksService, IShadowsocksServiceCall
+ import com.github.shadowsocks.database._
+ import com.github.shadowsocks.preferences.{PasswordEditTextPreference, ProfileEditTextPreference, SummaryEditTextPreference}
+ import com.github.shadowsocks.utils._
+-import com.google.android.gms.ads.{AdRequest, AdSize, AdView}
+-import com.google.android.gms.analytics.HitBuilders
+ import com.google.zxing.integration.android.IntentIntegrator
+ import com.nostra13.universalimageloader.core.download.BaseImageDownloader
+ import net.simonvt.menudrawer.MenuDrawer
+@@ -442,22 +440,6 @@ class Shadowsocks
+   }
+ 
+   def initAdView() {
+-    if (settings.getString(Key.proxy, "") == "198.199.101.152") {
+-      val layoutView = {
+-        if (Build.VERSION.SDK_INT > 10) {
+-          drawer.getContentContainer.getChildAt(0)
+-        } else {
+-          getLayoutView(drawer.getContentContainer.getParent)
+-        }
+-      }
+-      if (layoutView != null) {
+-        val adView = new AdView(this)
+-        adView.setAdUnitId("ca-app-pub-9097031975646651/7760346322")
+-        adView.setAdSize(AdSize.SMART_BANNER)
+-        layoutView.asInstanceOf[ViewGroup].addView(adView, 0)
+-        adView.loadAd(new AdRequest.Builder().build())
+-      }
+-    }
+   }
+ 
+   override def setContentView(layoutResId: Int) {
+@@ -768,11 +750,6 @@ class Shadowsocks
+     buf += new DrawableItem(-100, getString(R.string.recovery), new IconDrawable(this, IconValue.fa_recycle)
+         .colorRes(android.R.color.darker_gray).sizeDp(26), _ => {
+       // send event
+-      application.tracker.send(new HitBuilders.EventBuilder()
+-        .setCategory(Shadowsocks.TAG)
+-        .setAction("reset")
+-        .setLabel(getVersionName)
+-        .build())
+       recovery()
+     })
+ 
+@@ -780,11 +757,6 @@ class Shadowsocks
+       new DrawableItem(-200, getString(R.string.flush_dnscache), new IconDrawable(this, IconValue.fa_refresh)
+         .colorRes(android.R.color.darker_gray).sizeDp(26), _ => {
+         // send event
+-        application.tracker.send(new HitBuilders.EventBuilder()
+-          .setCategory(Shadowsocks.TAG)
+-          .setAction("flush_dnscache")
+-          .setLabel(getVersionName)
+-          .build())
+         flushDnsCache()
+       })
+ 
+@@ -792,22 +764,12 @@ class Shadowsocks
+       new DrawableItem(-300, getString(R.string.qrcode), new IconDrawable(this, IconValue.fa_qrcode)
+         .colorRes(android.R.color.darker_gray).sizeDp(26), _ => {
+         // send event
+-        application.tracker.send(new HitBuilders.EventBuilder()
+-          .setCategory(Shadowsocks.TAG)
+-          .setAction("qrcode")
+-          .setLabel(getVersionName)
+-          .build())
+         showQrCode()
+       })
+ 
+     buf += new DrawableItem(-400, getString(R.string.about), new IconDrawable(this, IconValue.fa_info_circle)
+         .colorRes(android.R.color.darker_gray).sizeDp(26), _ => {
+       // send event
+-      application.tracker.send(new HitBuilders.EventBuilder()
+-        .setCategory(Shadowsocks.TAG)
+-        .setAction("about")
+-        .setLabel(getVersionName)
+-        .build())
+       showAbout()
+     })
+ 
+diff --git a/src/main/scala/com/github/shadowsocks/ShadowsocksApplication.scala b/src/main/scala/com/github/shadowsocks/ShadowsocksApplication.scala
+index 48cb6f4..05e9059 100644
+--- a/src/main/scala/com/github/shadowsocks/ShadowsocksApplication.scala
++++ b/src/main/scala/com/github/shadowsocks/ShadowsocksApplication.scala
+@@ -45,37 +45,11 @@ import java.util.concurrent.TimeUnit
+ import android.app.Application
+ import com.github.shadowsocks.database.DBHelper
+ import com.github.shadowsocks.utils.Utils
+-import com.google.android.gms.analytics.GoogleAnalytics
+-import com.google.android.gms.common.api.ResultCallback
+-import com.google.android.gms.tagmanager.Container.FunctionCallMacroCallback
+-import com.google.android.gms.tagmanager.{ContainerHolder, TagManager}
+ 
+ class ShadowsocksApplication extends Application {
+   lazy val dbHelper = new DBHelper(this)
+   lazy val SIG_FUNC = "getSignature"
+-  var containerHolder: ContainerHolder = null
+-  lazy val tracker = GoogleAnalytics.getInstance(this).newTracker(R.xml.tracker)
+ 
+   override def onCreate() {
+-    val tm = TagManager.getInstance(this)
+-    val pending = tm.loadContainerPreferNonDefault("GTM-NT8WS8", R.raw.gtm_default_container)
+-    val callback = new ResultCallback[ContainerHolder] {
+-      override def onResult(holder: ContainerHolder): Unit = {
+-        if (!holder.getStatus.isSuccess) {
+-          return
+-        }
+-        containerHolder = holder
+-        val container = holder.getContainer
+-        container.registerFunctionCallMacroCallback(SIG_FUNC, new FunctionCallMacroCallback {
+-          override def getValue(functionName: String, parameters: util.Map[String, AnyRef]): AnyRef = {
+-            if (functionName == SIG_FUNC) {
+-              Utils.getSignature(getApplicationContext)
+-            }
+-            null
+-          }
+-        })
+-      }
+-    }
+-    pending.setResultCallback(callback, 2, TimeUnit.SECONDS)
+   }
+ }
+diff --git a/src/main/scala/com/github/shadowsocks/ShadowsocksNatService.scala b/src/main/scala/com/github/shadowsocks/ShadowsocksNatService.scala
+index 76a4afd..debc12d 100644
+--- a/src/main/scala/com/github/shadowsocks/ShadowsocksNatService.scala
++++ b/src/main/scala/com/github/shadowsocks/ShadowsocksNatService.scala
+@@ -53,7 +53,6 @@ import android.util.{SparseArray, Log}
+ import android.widget.Toast
+ import com.github.shadowsocks.aidl.Config
+ import com.github.shadowsocks.utils._
+-import com.google.android.gms.analytics.HitBuilders
+ import org.apache.http.conn.util.InetAddressUtils
+ 
+ import scala.collection._
+@@ -541,27 +540,12 @@ class ShadowsocksNatService extends Service with BaseService {
+         registerReceiver(lockReceiver, screenFilter)
+     }
+ 
+-    // send event
+-    application.tracker.send(new HitBuilders.EventBuilder()
+-      .setCategory(TAG)
+-      .setAction("start")
+-      .setLabel(getVersionName)
+-      .build())
+-
+     changeState(State.CONNECTING)
+ 
+     spawn {
+ 
+       if (config.proxy == "198.199.101.152") {
+-        val holder = application.containerHolder
+-        try {
+-          config = ConfigUtils.getPublicConfig(getBaseContext, holder.getContainer, config)
+-        } catch {
+-          case ex: Exception =>
+-            changeState(State.STOPPED, getString(R.string.service_failed))
+-            stopRunner()
+-            config = null
+-        }
++        config = null
+       }
+ 
+       if (config != null) {
+@@ -616,13 +600,6 @@ class ShadowsocksNatService extends Service with BaseService {
+       }
+     }
+ 
+-    // send event
+-    application.tracker.send(new HitBuilders.EventBuilder()
+-      .setCategory(TAG)
+-      .setAction("stop")
+-      .setLabel(getVersionName)
+-      .build())
+-
+     // reset NAT
+     killProcesses()
+ 
+diff --git a/src/main/scala/com/github/shadowsocks/ShadowsocksVpnService.scala b/src/main/scala/com/github/shadowsocks/ShadowsocksVpnService.scala
+index a480992..7121fbb 100644
+--- a/src/main/scala/com/github/shadowsocks/ShadowsocksVpnService.scala
++++ b/src/main/scala/com/github/shadowsocks/ShadowsocksVpnService.scala
+@@ -51,7 +51,6 @@ import android.util.Log
+ import android.widget.Toast
+ import com.github.shadowsocks.aidl.Config
+ import com.github.shadowsocks.utils._
+-import com.google.android.gms.analytics.HitBuilders
+ import org.apache.commons.net.util.SubnetUtils
+ import org.apache.http.conn.util.InetAddressUtils
+ 
+@@ -396,13 +395,6 @@ class ShadowsocksVpnService extends VpnService with BaseService {
+       return
+     }
+ 
+-    // send event
+-    application.tracker.send(new HitBuilders.EventBuilder()
+-      .setCategory(TAG)
+-      .setAction("start")
+-      .setLabel(getVersionName)
+-      .build())
+-
+     // register close receiver
+     val filter = new IntentFilter()
+     filter.addAction(Intent.ACTION_SHUTDOWN)
+@@ -418,15 +410,7 @@ class ShadowsocksVpnService extends VpnService with BaseService {
+ 
+     spawn {
+       if (config.proxy == "198.199.101.152") {
+-        val holder = getApplication.asInstanceOf[ShadowsocksApplication].containerHolder
+-        try {
+-          config = ConfigUtils.getPublicConfig(getBaseContext, holder.getContainer, config)
+-        } catch {
+-          case ex: Exception =>
+-            changeState(State.STOPPED, getString(R.string.service_failed))
+-            stopRunner()
+-            config = null
+-        }
++        config = null
+       }
+ 
+       if (config != null) {
+@@ -463,13 +447,6 @@ class ShadowsocksVpnService extends VpnService with BaseService {
+     // channge the state
+     changeState(State.STOPPING)
+ 
+-    // send event
+-    application.tracker.send(new HitBuilders.EventBuilder()
+-      .setCategory(TAG)
+-      .setAction("stop")
+-      .setLabel(getVersionName)
+-      .build())
+-
+     // reset VPN
+     killProcesses()
+ 
+diff --git a/src/main/scala/com/github/shadowsocks/utils/ConfigUtils.scala b/src/main/scala/com/github/shadowsocks/utils/ConfigUtils.scala
+index 7f9ad4a..a76c145 100644
+--- a/src/main/scala/com/github/shadowsocks/utils/ConfigUtils.scala
++++ b/src/main/scala/com/github/shadowsocks/utils/ConfigUtils.scala
+@@ -41,7 +41,6 @@ package com.github.shadowsocks.utils
+ 
+ import android.content.{SharedPreferences, Context}
+ import com.github.shadowsocks.{R, ShadowsocksApplication}
+-import com.google.android.gms.tagmanager.Container
+ import com.github.kevinsawicki.http.HttpRequest
+ import com.github.shadowsocks.aidl.Config
+ 
+@@ -196,48 +195,23 @@ object ConfigUtils {
+   }
+ 
+   def refresh(context: Context) {
+-    val holder = context.getApplicationContext.asInstanceOf[ShadowsocksApplication].containerHolder
+-    if (holder != null) holder.refresh()
+   }
+ 
+   def getRejectList(context: Context, app: ShadowsocksApplication): String = {
+     val default = context.getString(R.string.reject)
+-    try {
+-      val container = app.containerHolder.getContainer
+-      val update = container.getString("reject")
+-      if (update == null || update.isEmpty) default else update
+-    } catch {
+-      case ex: Exception => default
+-    }
++    default
+   }
+ 
+   def getBlackList(context: Context, app: ShadowsocksApplication): String = {
+     val default = context.getString(R.string.black_list)
+-    try {
+-      val container = app.containerHolder.getContainer
+-      val update = container.getString("black_list")
+-      if (update == null || update.isEmpty) default else update
+-    } catch {
+-      case ex: Exception => default
+-    }
++    default
+   }
+ 
+-  def getPublicConfig(context: Context, container: Container, config: Config): Config = {
+-    val url = container.getString("proxy_url")
+-    val sig = Utils.getSignature(context)
+-    val list = HttpRequest
+-      .post(url)
+-      .connectTimeout(2000)
+-      .readTimeout(2000)
+-      .send("sig="+sig)
+-      .body
+-    val proxies = util.Random.shuffle(list.split('|').toSeq).toSeq
+-    val proxy = proxies(0).split(':')
+-
+-    val host = proxy(0).trim
+-    val port = proxy(1).trim.toInt
+-    val password = proxy(2).trim
+-    val method = proxy(3).trim
++  def getPublicConfig(context: Context, container: Any, config: Config): Config = {
++    val host = "0.0.0.0"
++    val port = 9999
++    val password = "password"
++    val method = "AES-256-CFB"
+ 
+     new Config(config.isGlobalProxy, config.isGFWList, config.isBypassApps, config.isTrafficStat,
+       config.isUdpDns, config.profileName, host, password, method, config.proxiedAppString, config.route, port,
