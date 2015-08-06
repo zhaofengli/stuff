@@ -1,13 +1,13 @@
-diff --git a/wikipedia/src/main/java/org/wikipedia/WikipediaApp.java b/wikipedia/src/main/java/org/wikipedia/WikipediaApp.java
-index 23435eb..2a59219 100644
---- a/wikipedia/src/main/java/org/wikipedia/WikipediaApp.java
-+++ b/wikipedia/src/main/java/org/wikipedia/WikipediaApp.java
-@@ -189,6 +189,8 @@ public class WikipediaApp extends Application {
+diff --git a/app/src/main/java/org/wikipedia/WikipediaApp.java b/app/src/main/java/org/wikipedia/WikipediaApp.java
+index b1445fb..0064638 100644
+--- a/app/src/main/java/org/wikipedia/WikipediaApp.java
++++ b/app/src/main/java/org/wikipedia/WikipediaApp.java
+@@ -208,6 +208,8 @@ public class WikipediaApp extends Application {
          pageCache = new PageCache(this);
-
+ 
          new PerformMigrationsTask().execute();
 +
 +        this.setSslFallback(true);
      }
-
+ 
      public Bus getBus() {
