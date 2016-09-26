@@ -2,7 +2,7 @@
 #include <math.h>
 
 // Freaking CEs :/ Looks like they are using -std=c99 or something like that
-// Or just submit as C++
+// Or you can just submit it as C++
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
